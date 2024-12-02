@@ -1,0 +1,43 @@
+syntax = "proto3";
+package kratos.api;
+
+option go_package = "product/internal/conf;conf";
+
+import "google/protobuf/duration.proto";
+
+message Bootstrap {
+  Server server = 1;
+  Data data = 2;
+  RegistryConf registry = 3;
+}
+
+message Server {
+  message GRPC {
+    string network = 1;
+    string addr = 2;
+    google.protobuf.Duration timeout = 3;
+  }
+  GRPC grpc = 1;
+}
+
+message Data {
+  message Database {
+    string driver = 1;
+    string source = 2;
+  }
+  message Redis {
+    string addr = 1;
+    string password = 2;
+    int64 maxIdle = 3;
+    int64 idleTimeout = 4; //单位s
+    int64 maxActive = 5;
+    // 当连接数达到上限时，新的请求是等待还是立即报错.
+    bool wait = 6;
+    int64 expirationSeconds = 7;
+  }
+  Database database = 1;
+  Redis redis = 2;
+}
+message RegistryConf {
+  string addr = 1;
+}
