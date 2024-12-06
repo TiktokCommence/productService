@@ -17,7 +17,7 @@ type Product struct {
 	Price       float64   `gorm:"column:price"`
 	MerchantID  uint64    `gorm:"column:merchant_id"`
 	CreatedAt   time.Time `gorm:"column:created_at"`
-	UpdatedAt   time.Time `gorm:column:updated_at"`
+	UpdatedAt   time.Time `gorm:"column:updated_at"`
 }
 
 func (p *Product) TableName() string {
@@ -35,4 +35,16 @@ func (p *Product) Write() (string, error) {
 		return "", err
 	}
 	return string(body), nil
+}
+
+type ProductInfo struct {
+	Pd         *Product
+	Categories []string
+}
+
+func NewProductInfo(pd *Product, cats []string) *ProductInfo {
+	return &ProductInfo{
+		Pd:         pd,
+		Categories: cats,
+	}
 }
