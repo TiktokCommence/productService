@@ -1,19 +1,18 @@
-package mysql
+package repository
 
 import (
 	"context"
-	"errors"
 	"gorm.io/gorm"
-)
-
-var (
-	ErrorNoWhere = errors.New("no where for query")
 )
 
 type contextTxKey struct{}
 
 type Gdb struct {
 	db *gorm.DB
+}
+
+func NewGdb(db *gorm.DB) *Gdb {
+	return &Gdb{db: db}
 }
 
 func (g *Gdb) DB(ctx context.Context) *gorm.DB {

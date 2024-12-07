@@ -8,8 +8,9 @@ import (
 const ProductCategoryTableName = "categories"
 
 type ProductCategory struct {
-	Pid       uint64    `gorm:"column:p_id;index"`
-	Category  string    `gorm:"column:category;index"`
+	//使用唯一联合索引，（最左前缀法则）可以通过pid来查询
+	Pid       uint64    `gorm:"column:p_id;uniqueIndex:uidx_category,priority:1"`
+	Category  string    `gorm:"column:category;type:varchar(50);uniqueIndex:uidx_category,priority:2"`
 	CreatedAt time.Time `gorm:"column:created_at"`
 }
 

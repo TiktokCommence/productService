@@ -4,13 +4,15 @@ import (
 	"context"
 	"fmt"
 	pb "github.com/TiktokCommence/productService/api/product/v1"
+	"github.com/TiktokCommence/productService/internal/conf"
 	"github.com/TiktokCommence/productService/internal/model"
 	"github.com/TiktokCommence/productService/internal/tool"
 )
 
 type ProductService struct {
 	pb.UnimplementedProductServer
-	phandler ProductHandler
+	phandler    ProductHandler
+	pageOptions *conf.ListOptions
 }
 
 func NewProductService(phandler ProductHandler) *ProductService {
@@ -106,12 +108,15 @@ func (s *ProductService) DeleteProduct(ctx context.Context, req *pb.DeleteProduc
 	}, nil
 }
 func (s *ProductService) ListProducts(ctx context.Context, req *pb.ListProductsReq) (*pb.ListProductsResp, error) {
-	pdis, err := s.phandler.ListProducts(ctx, req.GetPage(), req.GetPageSize(), req.CategoryName)
+	var totalPage uint32
+	pdis, err := s.phandler.ListProducts(ctx, req.GetPage(), s.pageOptions.Pagesize, req.CategoryName, &totalPage)
 	if err != nil {
 		return &pb.ListProductsResp{}, fmt.Errorf("%w,reason:%w", ErrListProduct, err)
 	}
 	return &pb.ListProductsResp{
-		Products: transformProducts(pdis),
+		Products:    transformProducts(pdis),
+		CurrentPage: req.GetPage(),
+		TotalPages:  totalPage,
 	}, nil
 }
 func (s *ProductService) GetProduct(ctx context.Context, req *pb.GetProductReq) (*pb.GetProductResp, error) {

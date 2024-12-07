@@ -11,7 +11,7 @@ const (
 
 type Product struct {
 	ID          uint64    `gorm:"column:id;primaryKey"`
-	Name        string    `gorm:"column:name;index"`
+	Name        string    `gorm:"column:name;type:varchar(100);index"`
 	Description string    `gorm:"column:description"`
 	PictureUrl  string    `gorm:"column:picture_url"`
 	Price       float64   `gorm:"column:price"`

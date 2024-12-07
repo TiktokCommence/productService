@@ -16,9 +16,8 @@ service Product {
 
 message ListProductsReq{
   uint32 page = 1;
-  uint32 pageSize = 2;
 
-  optional string categoryName = 3;
+  optional string categoryName = 2;
 }
 
 message ProductInfo {
@@ -33,6 +32,8 @@ message ProductInfo {
 
 message ListProductsResp {
   repeated ProductInfo products = 1;
+  uint32 totalPages = 2;
+  uint32 currentPage = 3;
 }
 
 message GetProductReq {
