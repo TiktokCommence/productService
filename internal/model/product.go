@@ -48,3 +48,16 @@ func NewProductInfo(pd *Product, cats []string) *ProductInfo {
 		Categories: cats,
 	}
 }
+
+func (p *ProductInfo) Write() (string, error) {
+	body, err := json.Marshal(p)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
+
+func (p *ProductInfo) Read(val string) error {
+	err := json.Unmarshal([]byte(val), &p)
+	return err
+}

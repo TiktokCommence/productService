@@ -23,6 +23,13 @@ type ProductInfoRepository interface {
 	GetTotalNum(ctx context.Context, options ListOptions) (uint32, error)
 	GetProductInfosByIDs(ctx context.Context, ids []uint64) ([]*model.ProductInfo, error)
 }
+type ProductInfoCache interface {
+	SetProductInfo(ctx context.Context, id uint64, pi *model.ProductInfo, expire int) error
+	GetProductInfo(ctx context.Context, id uint64) (*model.ProductInfo, error)
+	DeleteProductInfo(ctx context.Context, id uint64) error
+	MgetProductInfo(ctx context.Context, ids []uint64) ([]uint64, []*model.ProductInfo, error)
+	MsetProductInfo(ctx context.Context, mp map[uint64]*model.ProductInfo) error
+}
 
 type GenerateIDer interface {
 	GenerateID() (uint64, error)
