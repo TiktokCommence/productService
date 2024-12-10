@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -20,6 +21,9 @@ type Product struct {
 	UpdatedAt   time.Time `gorm:"column:updated_at"`
 }
 
+func (p *Product) String() string {
+	return fmt.Sprintf("%+v", *p)
+}
 func (p *Product) TableName() string {
 	return ProductTableName
 }
@@ -48,7 +52,9 @@ func NewProductInfo(pd *Product, cats []string) *ProductInfo {
 		Categories: cats,
 	}
 }
-
+func (p *ProductInfo) String() string {
+	return fmt.Sprintf("%+v", *p)
+}
 func (p *ProductInfo) Write() (string, error) {
 	body, err := json.Marshal(p)
 	if err != nil {
