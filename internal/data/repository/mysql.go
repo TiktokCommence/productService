@@ -2,10 +2,16 @@ package repository
 
 import (
 	"context"
+	"github.com/TiktokCommence/productService/internal/biz"
+	"github.com/TiktokCommence/productService/internal/conf"
+	"github.com/TiktokCommence/productService/internal/model"
+	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 type contextTxKey struct{}
+
+var _ biz.Transaction = (*Gdb)(nil)
 
 type Gdb struct {
 	db *gorm.DB
@@ -13,6 +19,16 @@ type Gdb struct {
 
 func NewGdb(db *gorm.DB) *Gdb {
 	return &Gdb{db: db}
+}
+func NewDB(cf *conf.Data) *gorm.DB {
+	db, err := gorm.Open(mysql.Open(cf.Database.Source), &gorm.Config{})
+	if err != nil {
+		panic("connect mysql failed")
+	}
+	if err := db.AutoMigrate(&model.Product{}, &model.ProductCategory{}); err != nil {
+		panic(err)
+	}
+	return db
 }
 
 func (g *Gdb) DB(ctx context.Context) *gorm.DB {

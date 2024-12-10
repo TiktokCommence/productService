@@ -15,9 +15,10 @@ type ProductService struct {
 	pageOptions *conf.ListOptions
 }
 
-func NewProductService(phandler ProductHandler) *ProductService {
+func NewProductService(phandler ProductHandler, c *conf.ListOptions) *ProductService {
 	return &ProductService{
-		phandler: phandler,
+		phandler:    phandler,
+		pageOptions: c,
 	}
 }
 
@@ -109,7 +110,10 @@ func (s *ProductService) DeleteProduct(ctx context.Context, req *pb.DeleteProduc
 }
 func (s *ProductService) ListProducts(ctx context.Context, req *pb.ListProductsReq) (*pb.ListProductsResp, error) {
 	var totalPage uint32
-	pdis, err := s.phandler.ListProducts(ctx, req.GetPage(), s.pageOptions.Pagesize, req.CategoryName, &totalPage)
+	pdis, err := s.phandler.ListProducts(ctx, req.GetPage(), ListOptions{
+		PageSize: s.pageOptions.Pagesize,
+		Category: req.CategoryName,
+	}, &totalPage)
 	if err != nil {
 		return &pb.ListProductsResp{}, fmt.Errorf("%w,reason:%w", ErrListProduct, err)
 	}

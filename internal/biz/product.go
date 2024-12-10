@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/TiktokCommence/productService/internal/conf"
 	"github.com/TiktokCommence/productService/internal/model"
 	"github.com/TiktokCommence/productService/internal/service"
 	"github.com/go-kratos/kratos/v2/log"
@@ -16,11 +17,23 @@ import (
 var _ service.ProductHandler = (*ProductBiz)(nil)
 
 type ProductBiz struct {
-	tx    Transaction
-	pr    ProductInfoRepository
-	cache ProductInfoCache
-	g     GenerateIDer
-	log   *log.Helper
+	tx     Transaction
+	pr     ProductInfoRepository
+	cache  ProductInfoCache
+	g      GenerateIDer
+	expire *conf.Expiration
+	log    *log.Helper
+}
+
+func NewProductBiz(tx Transaction, pr ProductInfoRepository, cache ProductInfoCache, g GenerateIDer, expire *conf.Expiration, logger log.Logger) *ProductBiz {
+	return &ProductBiz{
+		tx:     tx,
+		pr:     pr,
+		cache:  cache,
+		g:      g,
+		expire: expire,
+		log:    log.NewHelper(logger),
+	}
 }
 
 func (p *ProductBiz) CreateProduct(ctx context.Context, productInfo *model.ProductInfo) error {
@@ -94,15 +107,15 @@ func (p *ProductBiz) GetProductInfoByID(ctx context.Context, ID uint64) (*model.
 		var err1 error
 		if err == nil {
 			//err==nil说明数据库中有数据
-			//TODO:将expire的配置传入，完成expire的离散化，防止缓存雪崩
-			err1 = p.cache.SetProductInfo(context.Background(), ID, pdi, 60*60*24*7)
+			//将expire的配置传入，完成expire的离散化，防止缓存雪崩
+			err1 = p.cache.SetProductInfo(context.Background(), ID, pdi, int(p.expire.ProductInfo))
 		} else {
 			//err!=nil说明数据库中没有数据
-			//TODO: 设定一个 expire，让 cache 5分钟后过期，防止大量的 cache 占用
+			//设定一个 expire，如让 cache 5分钟后过期，防止大量的 cache 占用
 			// 并且在这个 expire 期内，如果有新的数据更新，会重新 set 这个 cache
 			// 保证了 cache 的高可用性和快速的过期
 			// 但是在大量的并发场景下，需要保证 cache 过期后的数据是最新的
-			err1 = p.cache.SetProductInfo(context.Background(), ID, nil, 60*5)
+			err1 = p.cache.SetProductInfo(context.Background(), ID, nil, int(p.expire.NullProductInfo))
 		}
 		if err != nil {
 			p.log.Warn("set product info cache failed ", err1)
@@ -139,15 +152,14 @@ func (p *ProductBiz) DeleteProduct(ctx context.Context, ID uint64) error {
 	return nil
 }
 
-func (p *ProductBiz) ListProducts(ctx context.Context, page uint32, pageSize uint32, category *string, totalPage *uint32) ([]*model.ProductInfo, error) {
-	ListOpts := NewListOptions(WithCategory(category))
-	res, err := p.pr.GetTotalNum(ctx, ListOpts)
+func (p *ProductBiz) ListProducts(ctx context.Context, page uint32, listOpts service.ListOptions, totalPage *uint32) ([]*model.ProductInfo, error) {
+	res, err := p.pr.GetTotalNum(ctx, listOpts)
 	if err != nil {
 		return nil, fmt.Errorf("get total num error: %w", err)
 	}
-	*totalPage = uint32(math.Ceil(float64(res) / float64(pageSize)))
+	*totalPage = uint32(math.Ceil(float64(res) / float64(listOpts.PageSize)))
 
-	ids, err := p.pr.ListProductIDs(ctx, page, pageSize, ListOpts)
+	ids, err := p.pr.ListProductIDs(ctx, page, listOpts)
 	if err != nil {
 		return nil, fmt.Errorf("list product ids error: %w", err)
 	}

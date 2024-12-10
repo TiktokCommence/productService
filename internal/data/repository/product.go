@@ -6,16 +6,21 @@ import (
 	"github.com/TiktokCommence/productService/internal/biz"
 	"github.com/TiktokCommence/productService/internal/model"
 	"github.com/TiktokCommence/productService/internal/service"
+	"github.com/go-kratos/kratos/v2/log"
 	"strings"
 )
 
+var _ biz.ProductInfoRepository = (*ProductInfoRepository)(nil)
+
 type ProductInfoRepository struct {
-	DB *Gdb
+	DB  *Gdb
+	log *log.Helper
 }
 
-func NewProductInfoRepository(db *Gdb) *ProductInfoRepository {
+func NewProductInfoRepository(db *Gdb, logger log.Logger) *ProductInfoRepository {
 	return &ProductInfoRepository{
-		DB: db,
+		DB:  db,
+		log: log.NewHelper(logger),
 	}
 }
 
@@ -24,11 +29,13 @@ func (p *ProductInfoRepository) CreateProductInfo(ctx context.Context, pi *model
 
 	err := db.Create(pi.Pd).Error
 	if err != nil {
+		p.log.Errorf("mysql create %+v error", pi.Pd)
 		return err
 	}
 	categories := transformStringsToCategories(pi.Pd.ID, pi.Categories)
 	err = db.Create(&categories).Error
 	if err != nil {
+		p.log.Errorf("mysql create %+v error", categories)
 		return err
 	}
 	return nil
@@ -44,16 +51,19 @@ func (p *ProductInfoRepository) UpdateProductInfo(ctx context.Context, pi *model
 	if updateCategories {
 		err = db.Table(model.ProductCategoryTableName).Where("p_id = ?", pi.Pd.ID).Delete(&model.ProductCategory{}).Error
 		if err != nil {
+			p.log.Errorf("mysql delete category p_id = %d", pi.Pd.ID)
 			return err
 		}
 		categories := transformStringsToCategories(pi.Pd.ID, pi.Categories)
 		err = db.Create(&categories).Error
 		if err != nil {
+			p.log.Errorf("mysql create category %+v error", categories)
 			return err
 		}
 	}
 	err = db.Updates(pi.Pd).Error
 	if err != nil {
+		p.log.Errorf("mysql update %+v", pi.Pd)
 		return err
 	}
 
@@ -79,30 +89,32 @@ func (p *ProductInfoRepository) DeleteProductInfo(ctx context.Context, ID uint64
 	db := p.DB.DB(ctx)
 	err := db.Delete(&model.Product{}, ID).Error
 	if err != nil {
+		p.log.Errorf("mysql delete product id=%v", ID)
 		return err
 	}
 	err = db.Delete(&model.ProductCategory{}, "p_id =?", ID).Error
 	if err != nil {
+		p.log.Errorf("mysql delete product category p_id=%v", ID)
 		return err
 	}
 	return nil
 }
 
-func (p *ProductInfoRepository) ListProductIDs(ctx context.Context, currentPage uint32, pageSize uint32, options biz.ListOptions) ([]uint64, error) {
+func (p *ProductInfoRepository) ListProductIDs(ctx context.Context, currentPage uint32, options service.ListOptions) ([]uint64, error) {
 	query := p.DB.db.WithContext(ctx).Table(model.ProductTableName)
 	if options.Category != nil {
 		query = query.Joins(fmt.Sprintf("JOIN %s ON %s.id = %s.p_id", model.ProductCategoryTableName, model.ProductTableName, model.ProductCategoryTableName)).
 			Where(fmt.Sprintf("%s.category =?", model.ProductCategoryTableName), *options.Category)
 	}
 	var ids []uint64
-	err := query.Offset(int((currentPage-1)*pageSize)).Limit(int(pageSize)).Pluck("id", &ids).Error
+	err := query.Offset(int((currentPage-1)*options.PageSize)).Limit(int(options.PageSize)).Pluck("id", &ids).Error
 	if err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
-func (p *ProductInfoRepository) GetTotalNum(ctx context.Context, options biz.ListOptions) (uint32, error) {
+func (p *ProductInfoRepository) GetTotalNum(ctx context.Context, options service.ListOptions) (uint32, error) {
 	query := p.DB.db.WithContext(ctx).Table(model.ProductTableName)
 	if options.Category != nil {
 		query = query.Joins(fmt.Sprintf("JOIN %s ON %s.id = %s.p_id", model.ProductCategoryTableName, model.ProductTableName, model.ProductCategoryTableName)).

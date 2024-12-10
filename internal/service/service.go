@@ -9,7 +9,7 @@ import (
 )
 
 // ProviderSet is service providers.
-var ProviderSet = wire.NewSet()
+var ProviderSet = wire.NewSet(NewProductService)
 
 const (
 	UpdateInfoKey = "update_info"
@@ -21,7 +21,7 @@ type ProductHandler interface {
 	GetProductInfoByID(ctx context.Context, ID uint64) (*model.ProductInfo, error)
 	DeleteProduct(ctx context.Context, ID uint64) error
 
-	ListProducts(ctx context.Context, page uint32, pageSize uint32, category *string, totalPage *uint32) ([]*model.ProductInfo, error)
+	ListProducts(ctx context.Context, page uint32, listopts ListOptions, totalPage *uint32) ([]*model.ProductInfo, error)
 }
 
 var (

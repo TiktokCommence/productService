@@ -2,10 +2,12 @@ package repository
 
 import (
 	"context"
-	"github.com/TiktokCommence/productService/internal/biz"
 	"github.com/TiktokCommence/productService/internal/model"
+	"github.com/TiktokCommence/productService/internal/service"
+	"github.com/go-kratos/kratos/v2/log"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"os"
 	"testing"
 )
 
@@ -18,7 +20,8 @@ func initDB() *ProductInfoRepository {
 		panic(err)
 	}
 	gdb := NewGdb(db)
-	pdr := NewProductInfoRepository(gdb)
+	logger := log.NewStdLogger(os.Stdout)
+	pdr := NewProductInfoRepository(gdb, logger)
 	return pdr
 }
 
@@ -69,13 +72,13 @@ func TestProductInfoRepository_GetProductInfosByIDs(t *testing.T) {
 
 func TestProductInfoRepository_GetTotalNum(t *testing.T) {
 	p := initDB()
-	res, err := p.GetTotalNum(context.Background(), biz.ListOptions{})
+	res, err := p.GetTotalNum(context.Background(), service.ListOptions{})
 	if err != nil {
 		t.Error(err)
 	}
 	t.Log(res)
 	str := "ice food"
-	res, err = p.GetTotalNum(context.Background(), biz.ListOptions{Category: &str})
+	res, err = p.GetTotalNum(context.Background(), service.ListOptions{Category: &str})
 	if err != nil {
 		t.Error(err)
 	}

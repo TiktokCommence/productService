@@ -1,6 +1,8 @@
 package tool
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestCheckSliceEqual(t *testing.T) {
 	type args struct {

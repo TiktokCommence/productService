@@ -3,6 +3,8 @@ package cache
 import (
 	"context"
 	"fmt"
+	"github.com/TiktokCommence/productService/internal/biz"
+	"github.com/TiktokCommence/productService/internal/conf"
 	"github.com/TiktokCommence/productService/internal/model"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/redis/go-redis/v9"
@@ -10,9 +12,35 @@ import (
 	"time"
 )
 
+var _ biz.ProductInfoCache = (*ProductCache)(nil)
+
 type ProductCache struct {
 	cli *redis.Client
 	log *log.Helper
+}
+
+func NewProductCache(cli *redis.Client, logger log.Logger) *ProductCache {
+	return &ProductCache{
+		cli: cli,
+		log: log.NewHelper(logger),
+	}
+}
+
+func NewRedisClient(cf *conf.Data) *redis.Client {
+	cli := redis.NewClient(&redis.Options{
+		Addr:         cf.Redis.Addr,
+		Password:     cf.Redis.Password,
+		MaxRetries:   int(cf.Redis.MaxRetry),
+		ReadTimeout:  time.Duration(cf.Redis.ReadTimeout) * time.Second,
+		WriteTimeout: time.Duration(cf.Redis.WriteTimeout) * time.Second,
+		PoolSize:     int(cf.Redis.PoolSize),
+	})
+	_, err := cli.Ping(context.Background()).Result()
+	if err != nil {
+		panic(err)
+	}
+	return cli
+
 }
 
 func (p *ProductCache) SetProductInfo(ctx context.Context, id uint64, pi *model.ProductInfo, expire int) error {

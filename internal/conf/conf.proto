@@ -8,9 +8,14 @@ import "google/protobuf/duration.proto";
 message Bootstrap {
   Server server = 1;
   Data data = 2;
-  RegistryConf registry = 3;
+  Expiration ex = 3;
+  RegistryConf registry = 4;
+  ListOptions listOptions = 5;
 }
-
+message Expiration {
+  int64 productInfo = 1;//存储productInfo的超时时间,单位s
+  int64 nullProductInfo = 2;//空的productInfo的超时时间，单位s
+}
 message Server {
   message GRPC {
     string network = 1;
@@ -25,22 +30,21 @@ message Data {
     string driver = 1;
     string source = 2;
   }
+
   message Redis {
     string addr = 1;
     string password = 2;
-    int64 maxIdle = 3;
-    int64 idleTimeout = 4; //单位s
-    int64 maxActive = 5;
-    // 当连接数达到上限时，新的请求是等待还是立即报错.
-    bool wait = 6;
-    int64 expirationSeconds = 7;
+    int64 maxRetry = 3;//最大重试次数
+    int64 readTimeout = 4;//读操作的超时时间,单位s
+    int64 writeTimeout = 5;//写操作的超时时间,单位s
+    int64 poolSize = 6;//连接池的最大大小
   }
   Database database = 1;
   Redis redis = 2;
 }
-message RegistryConf {
-  string addr = 1;
-}
 message ListOptions {
   uint32 pagesize = 1;
+}
+message RegistryConf {
+  string Addr = 1;
 }
