@@ -20,12 +20,13 @@ func NewRegistrarServer(c *conf.RegistryConf, logger log.Logger) *etcd.Registry 
 	etcdCfg := clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: time.Second,
-		DialOptions: []grpc.DialOption{},
+		DialOptions: []grpc.DialOption{grpc.WithBlock()},
 	}
 
 	// 创建ETCD客户端
 	client, err := clientv3.New(etcdCfg)
 	if err != nil {
+		logger.Log(log.LevelError, "error", "connect registry center error")
 		panic(err)
 	}
 	logger.Log(log.LevelInfo, "msg", "service registry successfully")

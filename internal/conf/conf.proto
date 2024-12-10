@@ -46,5 +46,5 @@ message ListOptions {
   uint32 pagesize = 1;
 }
 message RegistryConf {
-  string Addr = 1;
+  string addr = 1;
 }

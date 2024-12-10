@@ -84,3 +84,25 @@ func TestProductInfoRepository_GetTotalNum(t *testing.T) {
 	}
 	t.Log(res)
 }
+
+func TestProductInfoRepository_DeleteProductInfo(t *testing.T) {
+	p := initDB()
+	err := p.CreateProductInfo(context.Background(), &model.ProductInfo{
+		Pd: &model.Product{
+			ID:          1,
+			Name:        "甜甜圈",
+			Description: "很好吃",
+			PictureUrl:  "123.com",
+			Price:       10,
+			MerchantID:  1,
+		},
+		Categories: []string{"food", "dessert"},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	err = p.DeleteProductInfo(context.Background(), 1)
+	if err != nil {
+		t.Error(err)
+	}
+}

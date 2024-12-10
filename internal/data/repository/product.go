@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/TiktokCommence/productService/internal/biz"
 	"github.com/TiktokCommence/productService/internal/model"
@@ -27,13 +28,13 @@ func NewProductInfoRepository(db *Gdb, logger log.Logger) *ProductInfoRepository
 func (p *ProductInfoRepository) CreateProductInfo(ctx context.Context, pi *model.ProductInfo) error {
 	db := p.DB.DB(ctx)
 
-	err := db.Create(pi.Pd).Error
+	err := db.Debug().Create(pi.Pd).Error
 	if err != nil {
 		p.log.Errorf("mysql create %+v error", pi.Pd)
 		return err
 	}
 	categories := transformStringsToCategories(pi.Pd.ID, pi.Categories)
-	err = db.Create(&categories).Error
+	err = db.Debug().Create(&categories).Error
 	if err != nil {
 		p.log.Errorf("mysql create %+v error", categories)
 		return err
@@ -49,19 +50,19 @@ func (p *ProductInfoRepository) UpdateProductInfo(ctx context.Context, pi *model
 		return fmt.Errorf("ctx value not found")
 	}
 	if updateCategories {
-		err = db.Table(model.ProductCategoryTableName).Where("p_id = ?", pi.Pd.ID).Delete(&model.ProductCategory{}).Error
+		err = db.Table(model.ProductCategoryTableName).Where("p_id = ?", pi.Pd.ID).Debug().Delete(&model.ProductCategory{}).Error
 		if err != nil {
 			p.log.Errorf("mysql delete category p_id = %d", pi.Pd.ID)
 			return err
 		}
 		categories := transformStringsToCategories(pi.Pd.ID, pi.Categories)
-		err = db.Create(&categories).Error
+		err = db.Debug().Create(&categories).Error
 		if err != nil {
 			p.log.Errorf("mysql create category %+v error", categories)
 			return err
 		}
 	}
-	err = db.Updates(pi.Pd).Error
+	err = db.Debug().Updates(pi.Pd).Error
 	if err != nil {
 		p.log.Errorf("mysql update %+v", pi.Pd)
 		return err
@@ -86,15 +87,24 @@ func (p *ProductInfoRepository) GetProductInfoByID(ctx context.Context, ID uint6
 }
 
 func (p *ProductInfoRepository) DeleteProductInfo(ctx context.Context, ID uint64) error {
+	var err error
 	db := p.DB.DB(ctx)
-	err := db.Delete(&model.Product{}, ID).Error
-	if err != nil {
-		p.log.Errorf("mysql delete product id=%v", ID)
+	res1 := db.Debug().Delete(&model.Product{}, "id = ?", ID)
+	if res1.Error != nil || res1.RowsAffected == 0 {
+		err = res1.Error
+		if err == nil {
+			err = errors.New("mysql don't exist the data")
+		}
+		p.log.Errorf("mysql delete product id=%v,reason:%v", ID, err)
 		return err
 	}
-	err = db.Delete(&model.ProductCategory{}, "p_id =?", ID).Error
-	if err != nil {
-		p.log.Errorf("mysql delete product category p_id=%v", ID)
+	res2 := db.Debug().Delete(&model.ProductCategory{}, "p_id = ?", ID)
+	if res2.Error != nil || res2.RowsAffected == 0 {
+		err = res2.Error
+		if err == nil {
+			err = errors.New("mysql don't exist the data")
+		}
+		p.log.Errorf("mysql delete product category p_id=%v,reason:%v", ID, err)
 		return err
 	}
 	return nil
