@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/TiktokCommence/productService/internal/biz"
+	"github.com/TiktokCommence/productService/internal/errcode"
 	"github.com/TiktokCommence/productService/internal/model"
 	"github.com/TiktokCommence/productService/internal/service"
 	"github.com/go-kratos/kratos/v2/log"
+	"gorm.io/gorm"
 	"strings"
 )
 
@@ -80,6 +82,9 @@ func (p *ProductInfoRepository) GetProductInfoByID(ctx context.Context, ID uint6
 	}
 	var categories []string
 	err = db.Table(model.ProductCategoryTableName).Where("p_id = ?", ID).Pluck("category", &categories).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errcode.ErrProductNotExist
+	}
 	if err != nil {
 		return nil, err
 	}

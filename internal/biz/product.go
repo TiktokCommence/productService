@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/TiktokCommence/productService/internal/conf"
+	"github.com/TiktokCommence/productService/internal/errcode"
 	"github.com/TiktokCommence/productService/internal/model"
 	"github.com/TiktokCommence/productService/internal/service"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/redis/go-redis/v9"
-	"gorm.io/gorm"
 	"math"
 	"time"
 )
@@ -89,18 +89,23 @@ func (p *ProductBiz) UpdateProduct(ctx context.Context, productInfo *model.Produ
 
 func (p *ProductBiz) GetProductInfoByID(ctx context.Context, ID uint64) (*model.ProductInfo, error) {
 	pdi, err := p.cache.GetProductInfo(ctx, ID)
-	//如果返回的pdi是nil，说明其存入的时候就是个空值，也就是不存在的数据，直接返回
-	//（为了应对缓存穿透，即大量请求去访问一个不存在的数据，增加数据库的压力）
+
 	//如果获取到了数据，当然就直接返回
-	if pdi == nil || err == nil {
+	if err == nil {
 		return pdi, nil
+	}
+
+	// redis中本来就是存的null值,说明数据库中也不存在,直接返回
+	//（为了应对缓存穿透，即大量请求去访问一个不存在的数据，增加数据库的压力）
+	if errors.Is(err, errcode.ErrProductNotExist) {
+		return nil, err
 	}
 	if !errors.Is(err, redis.Nil) {
 		p.log.Warn("get product info cache failed ", err)
 	}
 	//如果redis不存在该key，就从数据库中查
 	pdi, err = p.pr.GetProductInfoByID(ctx, ID)
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err != nil && !errors.Is(err, errcode.ErrProductNotExist) {
 		return nil, fmt.Errorf("get product info failed:%w", err)
 	}
 	go func() {
@@ -117,7 +122,7 @@ func (p *ProductBiz) GetProductInfoByID(ctx context.Context, ID uint64) (*model.
 			// 但是在大量的并发场景下，需要保证 cache 过期后的数据是最新的
 			err1 = p.cache.SetProductInfo(context.Background(), ID, nil, int(p.expire.NullProductInfo))
 		}
-		if err != nil {
+		if err1 != nil {
 			p.log.Warn("set product info cache failed ", err1)
 		}
 	}()
@@ -158,7 +163,9 @@ func (p *ProductBiz) ListProducts(ctx context.Context, page uint32, listOpts ser
 		return nil, fmt.Errorf("get total num error: %w", err)
 	}
 	*totalPage = uint32(math.Ceil(float64(res) / float64(listOpts.PageSize)))
-
+	if *totalPage < page {
+		return nil, errcode.ErrPageExceed
+	}
 	ids, err := p.pr.ListProductIDs(ctx, page, listOpts)
 	if err != nil {
 		return nil, fmt.Errorf("list product ids error: %w", err)

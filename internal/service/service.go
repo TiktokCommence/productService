@@ -42,6 +42,9 @@ func transformProducts(pdis []*model.ProductInfo) []*pb.ProductInfo {
 	return products
 }
 func transformProduct(pdi *model.ProductInfo) *pb.ProductInfo {
+	if pdi == nil {
+		return &pb.ProductInfo{}
+	}
 	return &pb.ProductInfo{
 		Id:          pdi.Pd.ID,
 		Name:        pdi.Pd.Name,

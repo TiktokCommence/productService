@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/TiktokCommence/productService/internal/biz"
 	"github.com/TiktokCommence/productService/internal/conf"
+	"github.com/TiktokCommence/productService/internal/errcode"
 	"github.com/TiktokCommence/productService/internal/model"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/redis/go-redis/v9"
@@ -13,6 +14,8 @@ import (
 )
 
 var _ biz.ProductInfoCache = (*ProductCache)(nil)
+
+const RedisNull = "product_null"
 
 type ProductCache struct {
 	cli *redis.Client
@@ -46,10 +49,22 @@ func NewRedisClient(cf *conf.Data) *redis.Client {
 func (p *ProductCache) SetProductInfo(ctx context.Context, id uint64, pi *model.ProductInfo, expire int) error {
 	key := p.generateKey(id)
 	expTime := p.generateExpiration(expire)
-	val, err := pi.Write()
-	if err != nil {
-		return err
+	//如果pi==nil，说明要存一个空值
+	var (
+		val string
+		err error
+	)
+	//检查下pi是否为nil
+	//如果是就存入一个逻辑空值
+	if pi == nil {
+		val = RedisNull
+	} else {
+		val, err = pi.Write()
+		if err != nil {
+			return err
+		}
 	}
+
 	_, err = p.cli.Set(ctx, key, val, expTime).Result()
 	if err != nil {
 		p.log.Errorf("set product info cache failed,key:%v,value:%v,error:%v", key, *pi, err)
@@ -59,13 +74,19 @@ func (p *ProductCache) SetProductInfo(ctx context.Context, id uint64, pi *model.
 }
 
 func (p *ProductCache) GetProductInfo(ctx context.Context, id uint64) (*model.ProductInfo, error) {
+	pi := &model.ProductInfo{}
 	key := p.generateKey(id)
 	val, err := p.cli.Get(ctx, key).Result()
 	if err != nil {
 		p.log.Errorf("get product info cache failed,key:%s,error:%v", key, err)
 		return nil, err
 	}
-	pi := &model.ProductInfo{}
+	//如果redis中的val==RedisNull
+	//说明redis中存的就是空值
+	//直接返回nil
+	if val == RedisNull {
+		return nil, errcode.ErrProductNotExist
+	}
 	err = pi.Read(val)
 	if err != nil {
 		return nil, err

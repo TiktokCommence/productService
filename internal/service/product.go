@@ -115,7 +115,10 @@ func (s *ProductService) ListProducts(ctx context.Context, req *pb.ListProductsR
 		Category: req.CategoryName,
 	}, &totalPage)
 	if err != nil {
-		return &pb.ListProductsResp{}, fmt.Errorf("%w,reason:%w", ErrListProduct, err)
+		return &pb.ListProductsResp{
+			CurrentPage: req.GetPage(),
+			TotalPages:  totalPage,
+		}, fmt.Errorf("%w,reason:%w", ErrListProduct, err)
 	}
 	return &pb.ListProductsResp{
 		Products:    transformProducts(pdis),
@@ -128,11 +131,11 @@ func (s *ProductService) GetProduct(ctx context.Context, req *pb.GetProductReq) 
 	if err != nil {
 		return &pb.GetProductResp{}, fmt.Errorf("%w,reason:%w", ErrGetProduct, err)
 	}
-
 	return &pb.GetProductResp{
 		Product: transformProduct(pdi),
 	}, nil
 }
 func (s *ProductService) SearchProducts(ctx context.Context, req *pb.SearchProductsReq) (*pb.SearchProductsResp, error) {
+	//TODO:
 	return &pb.SearchProductsResp{}, nil
 }
